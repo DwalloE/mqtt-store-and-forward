@@ -1,0 +1,19 @@
+# ESP-IDF build output
+build/
+sdkconfig
+sdkconfig.old
+dependencies.lock
+managed_components/
+
+# Host test build output
+test/build/
+*.gcno
+*.gcda
+*.gcov
+
+# Chaos suite scratch (stores, logs, broker state)
+test/run/
+__pycache__/
+
+# Never ships
+CLAUDE-HANDOFF.md
