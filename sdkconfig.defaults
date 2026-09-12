@@ -1,0 +1,18 @@
+# 04's baseline, plus what this repo is about.
+
+CONFIG_IDF_TARGET="esp32"
+
+# -O2: the engine's timing behaviour at -O0 would be fiction.
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_LOG_TIMESTAMP_SOURCE_RTOS=y
+
+# Task watchdog left ON deliberately: the CI scenario runs past the 5 s
+# window (it waits for the t=10s heartbeat) to prove the control loop
+# never starves even while draining a backlog.
+CONFIG_ESP_TASK_WDT_EN=y
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=5
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0=y
+
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y

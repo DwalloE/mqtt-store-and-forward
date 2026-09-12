@@ -1,0 +1,32 @@
+menu "Store-and-forward demo"
+
+    choice SAF_TRANSPORT
+        prompt "Transport binding"
+        default SAF_TRANSPORT_FAKE
+        help
+            The engine takes an injected transport. FAKE is the
+            deterministic liar the shell's out/in commands control -
+            it is what the Wokwi CI scenario runs, because wokwi-cli
+            has no IoT gateway. REAL binds esp-mqtt over Wi-Fi; both
+            bindings compile in every build.
+
+        config SAF_TRANSPORT_FAKE
+            bool "Injected fake transport (deterministic, out/in shell)"
+
+        config SAF_TRANSPORT_REAL
+            bool "Wi-Fi + esp-mqtt against a real broker"
+    endchoice
+
+    config SAF_WIFI_SSID
+        string "Wi-Fi SSID (REAL transport)"
+        default "Wokwi-GUEST"
+
+    config SAF_WIFI_PASSWORD
+        string "Wi-Fi password (REAL transport)"
+        default ""
+
+    config SAF_BROKER_URI
+        string "MQTT broker URI (REAL transport)"
+        default "mqtt://test.mosquitto.org"
+
+endmenu

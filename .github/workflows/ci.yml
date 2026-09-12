@@ -1,0 +1,104 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # The engine, proven twice on every commit. First the unit suite and
+  # the 100% branch gate on saf_core.c. Then the chaos suite: the SAME
+  # saf_core.c bound to a file store and a real TCP MQTT client, against
+  # a real mosquitto behind a cuttable proxy - broker SIGKILL, a PUBLISH
+  # cut mid-frame, a swallowed PUBACK, a reboot mid-drain, a power cut
+  # torn write. Zero loss and zero duplicates are asserted by the
+  # SUBSCRIBER's own verdict line, and both safety nets are proven able
+  # to fire: one pass without dedup must SEE the duplicate, one boot
+  # without the CRC check must MISS the torn record.
+  host:
+    name: host tests (unit + branch gate + chaos suite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: unit tests and the saf_core.c branch gate
+        run: make -C test
+
+      - name: install mosquitto and paho
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq mosquitto
+          pip install paho-mqtt
+
+      - name: chaos suite - the subscriber's verdict is the gate
+        shell: bash
+        run: |
+          set -o pipefail
+          make -C test chaos | tee chaos.log
+          grep -q 'saf: 0 lost, 0 duplicated after dedup' chaos.log
+          grep -q 'chaos: ALL SCENARIOS PASS' chaos.log
+
+      - name: keep the coverage summary and chaos log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence
+          path: |
+            test/build/gcov_summary.txt
+            test/build/*.gcov
+            chaos.log
+          if-no-files-found: error
+
+  # Builds the real firmware (both transport bindings compile; the fake
+  # is the default) and runs it in Wokwi: the scenario types stat/out/in
+  # into the shell, requires the NVS queue to build while "offline" and
+  # the firmware's own drain verdict after "in", then the t=10s
+  # heartbeat - outliving the 5 s task watchdog.
+  firmware:
+    name: build + simulate (queue while out, drain on in)
+    runs-on: ubuntu-latest
+    env:
+      WOKWI_CLI_TOKEN: ${{ secrets.WOKWI_CLI_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: build with ESP-IDF v5.3
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.3
+          target: esp32
+          command: idf.py build && idf.py uf2
+
+      - name: report image size and per-component sizes
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.3
+          target: esp32
+          command: idf.py size && idf.py size-components
+
+      # Skipped automatically on forks and on clones without the secret
+      # set. Get a free token at https://wokwi.com/dashboard/ci
+      - name: install wokwi-cli
+        if: env.WOKWI_CLI_TOKEN != ''
+        run: |
+          wget -q -O /usr/local/bin/wokwi-cli \
+            https://github.com/wokwi/wokwi-cli/releases/latest/download/wokwi-cli-linuxstatic-x64
+          chmod +x /usr/local/bin/wokwi-cli
+
+      - name: simulate - queue offline in NVS, drain verdict, heartbeat
+        if: env.WOKWI_CLI_TOKEN != ''
+        run: |
+          wokwi-cli --timeout 30000 --fail-text 'saf DATA AT RISK' \
+            --scenario wokwi-ci.scenario.yaml \
+            --serial-log-file wokwi-serial.log .
+
+      - name: keep the firmware image, map and serial log
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: |
+            build/uf2.bin
+            build/mqtt-store-and-forward.elf
+            build/mqtt-store-and-forward.map
+            wokwi-serial.log
+          if-no-files-found: warn

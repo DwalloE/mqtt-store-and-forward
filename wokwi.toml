@@ -1,0 +1,16 @@
+# Wokwi simulator / Wokwi CI configuration.
+#
+# `firmware` is a single image (bootloader + partition table + app)
+# because Wokwi flashes one file; `idf.py uf2` produces it. `elf` gives
+# the simulator symbol names.
+#
+# The scenario runs the FAKE transport (sdkconfig default): wokwi-cli
+# has no IoT gateway (the private gateway is bundled only with the VS
+# Code extension), so on-target CI proves boot, NVS recovery,
+# queue-while-out and drain-on-in - every real-broker byte is the host
+# chaos suite's job.
+
+[wokwi]
+version = 1
+firmware = 'build/uf2.bin'
+elf = 'build/mqtt-store-and-forward.elf'

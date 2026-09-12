@@ -1,0 +1,26 @@
+# The on-target proof. Every assertion rides on a line the FIRMWARE
+# computes from its own counters (03's `-> plausible` pattern - a
+# scenario can match text but cannot compare numbers):
+#
+#   - `out` forces the injected transport offline; each sample then
+#     prints its own saf-queue line, so depth=3 WILL appear as the
+#     backlog builds (samples every 500 ms).
+#   - `in` restores it; "saf: drained, nothing lost" is printed only
+#     when the engine's queue is empty and nothing is in flight - the
+#     failure text ("saf DATA AT RISK") shares no substring.
+#   - "alive t=10s" makes the run outlive the 5 s task watchdog
+#     (01's lesson). Total sim time ~15 s.
+name: "boots, queues while offline in NVS, drains on reconnect"
+version: 1
+author: "Elias Dwallo"
+
+steps:
+  - wait-serial: "shell: commands: stat | out | in"
+  - write-serial: "stat\n"
+  - wait-serial: "stat: seq_next="
+  - write-serial: "out\n"
+  - wait-serial: "transport: forced offline - queueing to NVS"
+  - wait-serial: "saf-queue: depth=3"
+  - write-serial: "in\n"
+  - wait-serial: "saf: drained, nothing lost"
+  - wait-serial: "alive t=10s"
