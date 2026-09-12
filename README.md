@@ -62,7 +62,14 @@ What the harness caught while this was built — the evidence, not the war story
   never ran. The fixed test makes the store list a key it then refuses to read
   (`test_saf.c: test_recovery_trims_unreadable_tail`). A test that passes before the
   code exists is the control you forgot to run.
-- BUG_GALLERY_PENDING_CI
+- **CI's first run refused a real out-of-bounds risk clang had waved through.**
+  GCC 13's `-Warray-bounds` (fortified `memcpy`) rejected the hand-rolled MQTT
+  CONNECT encoder: the client-id length was unbounded on entry, so the frame buffer
+  provably *could* overflow even though no caller ever passed a long id. The fix
+  bounds every externally-sized input at the encoder boundary
+  (`test/mqtt_mini.c`) — the compiler was right and "no caller does that" is not a
+  bounds check. Same run: glibc hides `usleep`/`srandom` behind `_DEFAULT_SOURCE`,
+  which macOS had silently forgiven.
 
 ## How it is tested
 
