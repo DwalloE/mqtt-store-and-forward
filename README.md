@@ -9,7 +9,7 @@ asserted downstream in CI.
 
 ## Run it in your browser
 
-**[Wokwi project — WOKWI_LINK_PENDING](WOKWI_LINK_PENDING)** — an honestly-labeled
+**[Wokwi project](https://wokwi.com/projects/474963979580769281)** — an honestly-labeled
 Arduino-core port (browser Wokwi can't compile ESP-IDF): same engine rules, RAM queue
 instead of NVS, real MQTT to `test.mosquitto.org` through the browser gateway. Type
 `stat`, then `out` (watch the queue build), then `in` — and wait for the firmware's own
