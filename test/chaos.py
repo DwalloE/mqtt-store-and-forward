@@ -38,6 +38,11 @@ DEVICE_BIN = os.path.join(HERE, "build", "host_device")
 
 
 def find_mosquitto():
+    # SAF_BROKER_CMD overrides for machines without mosquitto (a
+    # stand-in must accept `-c <conf>`); CI always runs the real thing.
+    override = os.environ.get("SAF_BROKER_CMD")
+    if override:
+        return override
     for cand in (shutil.which("mosquitto"), "/usr/local/sbin/mosquitto",
                  "/opt/homebrew/sbin/mosquitto", "/usr/sbin/mosquitto"):
         if cand and os.path.exists(cand):
@@ -286,7 +291,7 @@ class Rig:
         self.proxy = Proxy(self.proxy_port, self.broker_port)
 
     def start_broker(self):
-        self.broker = Child("broker", [MOSQUITTO, "-c", self.conf])
+        self.broker = Child("broker", [*MOSQUITTO.split(), "-c", self.conf])
         self._wait_port(self.broker_port)
 
     def _wait_port(self, port, timeout=5):
