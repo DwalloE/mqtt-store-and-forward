@@ -13,6 +13,9 @@
  *   saf-done:      everything enqueued was acked; exits 0
  *   saf-timeout:   --run-ms expired first; exits 3
  */
+/* _DEFAULT_SOURCE: glibc hides usleep/srandom behind it (usleep left
+ * POSIX in 2008); macOS ignores it. */
+#define _DEFAULT_SOURCE
 #define _POSIX_C_SOURCE 200809L
 
 #include <stdio.h>

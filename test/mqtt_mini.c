@@ -73,6 +73,10 @@ bool mm_connect(mqtt_mini *mm, const char *host, int port,
      * we send 0 there, so the broker keeps QoS1 state across our
      * disconnects (session resumption; CONNACK echoes what it kept). */
     size_t idlen = strlen(client_id);
+    if (idlen > 64) { /* also lets GCC see the buffer bounds below */
+        close(fd);
+        return false;
+    }
     uint8_t var[10 + 2 + 64];
     size_t v = 0;
     memcpy(var + v, "\x00\x04MQTT\x04", 7); v += 7;
@@ -81,10 +85,10 @@ bool mm_connect(mqtt_mini *mm, const char *host, int port,
     put_u16(var + v, (uint16_t)idlen); v += 2;
     memcpy(var + v, client_id, idlen); v += idlen;
 
-    uint8_t frame[16 + sizeof var];
+    uint8_t frame[2 + sizeof var];
     size_t n = 0;
     frame[n++] = 0x10;
-    n += put_remlen(frame + n, v);
+    frame[n++] = (uint8_t)v; /* v <= 76 < 128: one remaining-length byte */
     memcpy(frame + n, var, v); n += v;
     if (!send_all(fd, frame, n)) {
         close(fd);
@@ -124,6 +128,8 @@ bool mm_publish_qos1(mqtt_mini *mm, const char *topic,
     if (mm->fd < 0)
         return false;
     size_t tlen = strlen(topic);
+    if (tlen > 128 || len > 512)
+        return false;
     size_t rem = 2 + tlen + 2 + len;
 
     uint8_t frame[8 + 2 + 128 + 2 + 512];
